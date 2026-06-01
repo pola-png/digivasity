@@ -184,13 +184,13 @@ export const updateProfile = async (user: AppUser, data: { displayName?: string 
 };
 
 export const sendEmailVerification = async (redirectUrl: string) => {
-  return account.createVerification(redirectUrl);
+  return account.createVerification({ url: redirectUrl });
 };
 
 export const getVerificationRedirectUrl = () => verificationRedirectUrl;
 
 export const verifyEmail = async (userId: string, secret: string) => {
-  await account.updateVerification(userId, secret);
+  await account.updateEmailVerification({ userId, secret });
   return refreshCurrentUser();
 };
 
