@@ -57,13 +57,13 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { io, Socket } from 'socket.io-client';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { initAnalytics } from './lib/firebase';
 import {
   appwriteIds,
   handleAppwriteError,
   OperationType,
   onAuthStateChanged,
   signOut,
+  refreshCurrentUser,
   getDocument,
   listDocuments,
   createDocument,
@@ -1101,7 +1101,7 @@ const POFView = () => {
   );
 };
 
-const ChatView = () => {
+const ChatView = ({ currentUser }: { currentUser: AppUser | null }) => {
   const [mode, setMode] = useState<'ai' | 'live'>('ai');
   const [messages, setMessages] = useState<{role: 'user' | 'bot' | 'counselor', content: string, sender?: string}[]>([
     { role: 'bot', content: "Hello! I'm your Digivasity AI Advisor. How can I help you with your overseas education journey today?" }
@@ -1113,7 +1113,6 @@ const ChatView = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const liveScrollRef = useRef<HTMLDivElement>(null);
 
-  // Initialize Socket for Live Chat
   useEffect(() => {
     if (mode === 'live' && !socket) {
       const newSocket = io();
@@ -1130,9 +1129,10 @@ const ChatView = () => {
 
       return () => {
         newSocket.disconnect();
+        setSocket(null);
       };
     }
-  }, [mode]);
+  }, [mode, socket]);
 
   useEffect(() => {
     const ref = mode === 'ai' ? scrollRef : liveScrollRef;
@@ -4016,7 +4016,7 @@ const AdminView = ({
                 {uploadingImage ? (
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <Loader2 className="animate-spin text-brand-orange w-8 h-8" />
-                    <span className="text-white text-xs font-bold">Uploading to Firebase... {uploadProgress}%</span>
+                    <span className="text-white text-xs font-bold">Uploading to Appwrite Storage... {uploadProgress}%</span>
                     <div className="w-48 bg-white/10 h-1.5 rounded-full overflow-hidden">
                       <div className="bg-[#F27D26] h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                     </div>
@@ -4404,10 +4404,6 @@ const WhatsAppPopup = () => {
 // --- Main App ---
 
 export default function App() {
-  useEffect(() => {
-    initAnalytics();
-  }, []);
-
   return (
     <BrowserRouter>
       <Routes>
@@ -4438,6 +4434,13 @@ function MainLayout() {
     }
     if (authMode === 'google') {
       window.history.replaceState({}, document.title, window.location.pathname);
+      void (async () => {
+        const current = await refreshCurrentUser();
+        if (current) {
+          await createUserDocument(current);
+          setUser(current);
+        }
+      })();
     }
     if (authMode === 'google-error') {
       setShowAuth(true);
@@ -4555,8 +4558,7 @@ function MainLayout() {
     return () => unsubscribe();
   }, [user]);
 
-  // Appwrite does not provide Firebase Cloud Messaging; this app now uses
-  // database notifications only. Push delivery can be wired up later via a separate service.
+  // Notifications are handled separately from auth and database records.
 
   // Publish News Article
   const handlePublishNews = async (newsData: any, notifyUsers: boolean) => {
@@ -4852,7 +4854,7 @@ function MainLayout() {
           {view === 'pof' && <motion.div key="pof" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><POFView /></motion.div>}
           {view === 'visa' && <motion.div key="visa" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><VisaView /></motion.div>}
           {view === 'resume' && <motion.div key="res" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ResumeView /></motion.div>}
-          {view === 'chat' && <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ChatView /></motion.div>}
+          {view === 'chat' && <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ChatView currentUser={user} /></motion.div>}
           {view === 'blog' && (
             <motion.div key="blog" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <BlogView 

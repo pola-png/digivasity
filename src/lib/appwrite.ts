@@ -33,6 +33,10 @@ const googleSuccessUrl =
 const googleFailureUrl =
   import.meta.env.VITE_APPWRITE_GOOGLE_FAILURE_URL ||
   `${getCurrentUrl()}?auth=google-error`;
+const verificationRedirectUrl =
+  import.meta.env.VITE_APPWRITE_VERIFY_URL || '';
+const recoveryRedirectUrl =
+  import.meta.env.VITE_APPWRITE_RECOVERY_URL || '';
 
 const client = new Client();
 
@@ -183,6 +187,8 @@ export const sendEmailVerification = async (redirectUrl: string) => {
   return account.createVerification(redirectUrl);
 };
 
+export const getVerificationRedirectUrl = () => verificationRedirectUrl;
+
 export const verifyEmail = async (userId: string, secret: string) => {
   await account.updateVerification(userId, secret);
   return refreshCurrentUser();
@@ -191,6 +197,8 @@ export const verifyEmail = async (userId: string, secret: string) => {
 export const sendPasswordResetEmail = async (email: string, redirectUrl: string) => {
   return account.createRecovery(email, redirectUrl);
 };
+
+export const getRecoveryRedirectUrl = () => recoveryRedirectUrl;
 
 export const confirmPasswordReset = async (
   userId: string,

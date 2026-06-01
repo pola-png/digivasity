@@ -19,6 +19,8 @@ import {
   confirmPasswordReset,
   createUserDocument,
   createUserWithEmailAndPassword,
+  getRecoveryRedirectUrl,
+  getVerificationRedirectUrl,
   refreshCurrentUser,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -58,14 +60,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const verificationUrl = useMemo(
-    () => `${window.location.origin}${window.location.pathname}?mode=verifyEmail`,
-    [],
-  );
-  const recoveryUrl = useMemo(
-    () => `${window.location.origin}${window.location.pathname}?mode=resetPassword`,
-    [],
-  );
+  const verificationUrl = useMemo(() => getVerificationRedirectUrl(), []);
+  const recoveryUrl = useMemo(() => getRecoveryRedirectUrl(), []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -139,6 +135,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
     setStatus(null);
 
     try {
+      if (!recoveryUrl) {
+        throw new Error('Set VITE_APPWRITE_RECOVERY_URL to your production reset-password URL.');
+      }
       await sendPasswordResetEmail(forgotEmail, recoveryUrl);
       setStatus(`We sent a password reset link to ${forgotEmail}.`);
     } catch (err: any) {
@@ -189,6 +188,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
     try {
       if (mode === 'register') {
+        if (!verificationUrl) {
+          throw new Error('Set VITE_APPWRITE_VERIFY_URL to your production email verification URL.');
+        }
         const result = await createUserWithEmailAndPassword(
           formData.email,
           formData.password,
@@ -271,6 +273,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
     setStatus(null);
 
     try {
+      if (!verificationUrl) {
+        throw new Error('Set VITE_APPWRITE_VERIFY_URL to your production email verification URL.');
+      }
       await sendEmailVerification(verificationUrl);
       setStatus('A fresh verification email has been sent.');
     } catch (err: any) {
@@ -628,7 +633,9 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
                 {googleLoading ? (
                   <Loader2 className="animate-spin mr-3 w-5 h-5" />
                 ) : (
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5 mr-3" alt="Google" />
+                  <span className="w-5 h-5 mr-3 rounded-full bg-white text-[#4285F4] flex items-center justify-center text-[11px] font-black leading-none">
+                    G
+                  </span>
                 )}
                 Google Account
               </button>
