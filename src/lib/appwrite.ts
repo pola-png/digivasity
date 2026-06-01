@@ -11,7 +11,7 @@ import {
 } from 'appwrite';
 import type { Models } from 'appwrite';
 
-const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || '';
+const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://fra.cloud.appwrite.io/v1';
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID || '';
 
 export const appwriteIds = {

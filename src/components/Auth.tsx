@@ -223,7 +223,19 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
       }
     } catch (err: any) {
       const message = err?.message || 'An unexpected error occurred.';
-      if (message.toLowerCase().includes('email already exists')) {
+      if (message.toLowerCase().includes('failed to fetch')) {
+        setError(
+          'Failed to reach Appwrite. Check VITE_APPWRITE_ENDPOINT, your Appwrite Web platform origin, and that the FRA project endpoint matches your console.',
+        );
+      } else if (message.toLowerCase().includes('network request failed')) {
+        setError(
+          'Network request failed. Check that your Appwrite endpoint is reachable and your site origin is added in Appwrite Console.',
+        );
+      } else if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('not allowed')) {
+        setError(
+          'Appwrite blocked this request. Make sure your current domain is added under Appwrite Web platforms and Google OAuth is enabled.',
+        );
+      } else if (message.toLowerCase().includes('email already exists')) {
         setError('An account with this email already exists. Please log in instead.');
       } else {
         setError(message);
@@ -242,7 +254,14 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
       signInWithGoogle();
     } catch (err: any) {
       setGoogleLoading(false);
-      setError(err?.message || 'Google sign-in failed.');
+      const message = err?.message || 'Google sign-in failed.';
+      if (message.toLowerCase().includes('failed to fetch')) {
+        setError(
+          'Failed to reach Appwrite during Google login. Check the endpoint, your Appwrite Web platform origin, and that the Google OAuth provider is enabled.',
+        );
+      } else {
+        setError(message);
+      }
     }
   };
 
