@@ -37,12 +37,39 @@ The Appwrite pieces handle auth, database, and storage. The live counselor chat 
 
 Make sure the following collection attributes exist in the `digivasitydb` database:
 
-1. `users` collection: `uid`, `email`, `fullName`, `displayName`, `whatsapp`, `admi`, `role`, `admin`, `createdAt`, `credits`, `lastCreditRefresh`, `subscriptionJson`, `pushTokens`, `pushPreferencesJson`, `fcmToken`, `pushToken`, `lastPushToken`, `lastPushTokenAt`
+1. `users` collection: `email`, `fullName`, `displayName`, `whatsapp`, `admi`, `role`, `admin`, `createdAt`, `credits`, `lastCreditRefresh`, `subscriptionJson`, `pushTokens`, `pushPreferencesJson`, `fcmToken`, `pushToken`, `lastPushToken`, `lastPushTokenAt`
 2. `news` collection: `title`, `summary`, `excerpt`, `content`, `imageUrl`, `category`, `slug`, `date`, `createdBy`, `authorUid`, `authorName`, `publishedAt`, `updatedAt`, `status`, `isFeatured`, `linksJson`
 3. `notifications` collection: `title`, `message`, `body`, `link`, `type`, `newsId`, `createdBy`, `createdAt`
 4. Storage bucket: `digivasity_storage`
 
 For the `users` collection, make sure the authenticated user can create their own document, and the document-level permissions should allow that same user to read/update/delete their profile record.
+Use the Appwrite row ID (`$id`) as the user profile document ID, so the app can safely upsert the row using the auth user ID.
+
+## Appwrite table permissions
+
+Use these settings so the app works with Appwrite's table/row security model:
+
+1. `users` table
+   - Create: `Users`
+   - Read/Update/Delete: handled by row permissions
+   - Row security: `Enabled`
+   - Row permissions created by the app: `read`, `update`, `delete` for the owning user
+
+2. `news` table
+   - Create: `Users`
+   - Row security: `Enabled`
+   - Created rows: `read` for `Any`, `update` and `delete` for the publishing user
+   - If you want stricter admin-only publishing, move the create step to a server function or backend route
+
+3. `notifications` table
+   - Create: `Users`
+   - Row security: `Enabled`
+   - Created rows: `read` for `Any` if you want the in-app feed visible broadly, or `Users` if you want only signed-in users to see it
+   - `update` and `delete` can stay with the creating user
+
+Important:
+- Do not pass document-level `create` permission to `createDocument`. Appwrite only accepts `read`, `update`, `delete`, or `write` for row permissions.
+- The table-level `Create` permission is what allows a signed-in user to insert a new row.
 
 ## Google OAuth setup
 

@@ -336,7 +336,6 @@ export const createUserDocument = async (
   }
 
   const payload = {
-    uid: userId,
     email: user.email || '',
     fullName: additionalData?.fullName || existing?.fullName || user.displayName || '',
     displayName: additionalData?.fullName || existing?.displayName || user.displayName || '',
