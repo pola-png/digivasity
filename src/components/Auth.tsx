@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail,
@@ -58,9 +58,15 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
   const [forgotEmail, setForgotEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const latestOnSuccess = useRef(onSuccess);
+  const handledVerificationToken = useRef<string | null>(null);
 
   const verificationUrl = useMemo(() => getVerificationRedirectUrl(), []);
   const recoveryUrl = useMemo(() => getRecoveryRedirectUrl(), []);
+
+  useEffect(() => {
+    latestOnSuccess.current = onSuccess;
+  }, [onSuccess]);
 
   useEffect(() => {
     setMode(initialMode);
@@ -82,6 +88,11 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
     }
 
     if (urlMode === 'verifyEmail' && userId && secret) {
+      const verificationKey = `${userId}:${secret}`;
+      if (handledVerificationToken.current === verificationKey) {
+        return;
+      }
+      handledVerificationToken.current = verificationKey;
       setMode('verify');
       setEmailLoading(true);
       setError(null);
@@ -94,12 +105,13 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
           if (current) {
             await createUserDocument(current);
             setStatus('Your email has been verified. You can continue now.');
-            onSuccess();
+            latestOnSuccess.current();
           } else {
             setStatus('Your email has been verified. You can sign in now.');
             setMode('login');
           }
         } catch (err: any) {
+          handledVerificationToken.current = null;
           setError(err?.message || 'Verification link is invalid or has expired.');
         } finally {
           setEmailLoading(false);
@@ -123,7 +135,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
     if (current && !current.emailVerified) {
       setMode('verify');
     }
-  }, [onSuccess]);
+  }, [initialMode]);
 
   const goBack = () => {
     setError(null);
