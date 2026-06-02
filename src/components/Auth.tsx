@@ -63,6 +63,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
   const verificationUrl = useMemo(() => getVerificationRedirectUrl(), []);
   const recoveryUrl = useMemo(() => getRecoveryRedirectUrl(), []);
+  const getVerificationStorageKey = (verificationKey: string) => `digivasity:email-verification:${verificationKey}`;
 
   useEffect(() => {
     latestOnSuccess.current = onSuccess;
@@ -89,10 +90,19 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
     if (urlMode === 'verifyEmail' && userId && secret) {
       const verificationKey = `${userId}:${secret}`;
-      if (handledVerificationToken.current === verificationKey) {
+      const storageKey = getVerificationStorageKey(verificationKey);
+      const alreadyHandled =
+        handledVerificationToken.current === verificationKey ||
+        (typeof window !== 'undefined' && window.sessionStorage.getItem(storageKey) === '1');
+
+      if (alreadyHandled) {
         return;
       }
+
       handledVerificationToken.current = verificationKey;
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(storageKey, '1');
+      }
       setMode('verify');
       setEmailLoading(true);
       setError(null);
@@ -111,8 +121,16 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
             setMode('login');
           }
         } catch (err: any) {
-          handledVerificationToken.current = null;
-          setError(err?.message || 'Verification link is invalid or has expired.');
+          const message = err?.message || 'Verification link is invalid or has expired.';
+          const current = await refreshCurrentUser();
+          if (current?.emailVerified) {
+            await createUserDocument(current);
+            setStatus('Your email is already verified. You can continue now.');
+            latestOnSuccess.current();
+            return;
+          }
+
+          setError(message);
         } finally {
           setEmailLoading(false);
         }
