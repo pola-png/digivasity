@@ -90,6 +90,7 @@ const SYSTEM_ADMIN_EMAILS = [
 
 const nowIso = () => new Date().toISOString();
 const todayIso = () => nowIso().slice(0, 10);
+const toJsonText = (value: unknown) => JSON.stringify(value ?? []);
 
 const isAdminEmail = (email?: string | null) => {
   if (!email) return false;
@@ -352,7 +353,7 @@ export const createUserDocument = async (
         type: 'none',
         expiresAt: null,
       }),
-    pushTokens: existing?.pushTokens || [],
+    pushTokens: toJsonText(existing?.pushTokens),
     pushPreferencesJson:
       existing?.pushPreferencesJson ||
       JSON.stringify({

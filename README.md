@@ -37,13 +37,14 @@ The Appwrite pieces handle auth, database, and storage. The live counselor chat 
 
 Make sure the following collection attributes exist in the `digivasitydb` database:
 
-1. `users` collection: `email`, `fullName`, `displayName`, `whatsapp`, `admi`, `role`, `admin`, `createdAt`, `credits`, `lastCreditRefresh`, `subscriptionJson`, `pushTokens`, `pushPreferencesJson`, `fcmToken`, `pushToken`, `lastPushToken`, `lastPushTokenAt`
-2. `news` collection: `title`, `summary`, `excerpt`, `content`, `imageUrl`, `category`, `slug`, `date`, `createdBy`, `authorUid`, `authorName`, `publishedAt`, `updatedAt`, `status`, `isFeatured`, `linksJson`
-3. `notifications` collection: `title`, `message`, `body`, `link`, `type`, `newsId`, `createdBy`, `createdAt`
+1. `users` collection: `$id` (row ID), `fullName`, `displayName`, `email`, `credits`, `admi`, `admin`, `whatsapp`, `lastCreditRefresh`, `subscriptionJson`, `pushTokens`, `fcmToken`, `lastPushToken`, `lastPushTokenAt`, `role`, `createdAt`, `pushPreferencesJson`
+2. `news` collection: `$id` (row ID), `title`, `summary`, `content`, `publishedAt`, `excerpt`, `category`, `slug`, `imageUrl`, `authorUid`, `date`, `authorName`, `status`, `isFeatured`, `linksJson`, `createdBy`, `updatedAt`
+3. `notifications` collection: `$id` (row ID), `title`, `message`, `newsId`, `createdAt`, `type`, `body`, `link`, `createdBy`
 4. Storage bucket: `digivasity_storage`
 
 For the `users` collection, make sure the authenticated user can create their own document, and the document-level permissions should allow that same user to read/update/delete their profile record.
-Use the Appwrite row ID (`$id`) as the user profile document ID, so the app can safely upsert the row using the auth user ID.
+Use the Appwrite row ID (`$id`) as the user profile document ID, so the app can safely upsert the row using the auth user ID. Do not add a separate `uid` column unless you also update the app to write it.
+For the `news` and `notifications` tables, the app writes only the columns listed above and uses the Appwrite row ID as the document ID. There is no older `uid` field in any table write path.
 
 ## Appwrite table permissions
 
