@@ -224,6 +224,7 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
         if (!verificationUrl) {
           throw new Error('Set VITE_APPWRITE_VERIFY_URL to your production email verification URL.');
         }
+
         const result = await createUserWithEmailAndPassword(
           formData.email,
           formData.password,
@@ -232,11 +233,26 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
         if (result.user) {
           await updateProfile(result.user, { displayName: formData.fullName });
-          await createUserDocument(result.user, {
-            fullName: formData.fullName,
-            whatsapp: formData.whatsapp,
-          });
-          await sendEmailVerification(verificationUrl);
+
+          try {
+            await createUserDocument(result.user, {
+              fullName: formData.fullName,
+              whatsapp: formData.whatsapp,
+            });
+          } catch (profileError: any) {
+            throw new Error(
+              `User profile document write failed: ${profileError?.message || String(profileError)}`,
+            );
+          }
+
+          try {
+            await sendEmailVerification(verificationUrl);
+          } catch (verificationError: any) {
+            throw new Error(
+              `Verification email request failed: ${verificationError?.message || String(verificationError)}`,
+            );
+          }
+
           setMode('verify');
           setStatus('Registration complete. Check your email to verify your account.');
         }
@@ -257,6 +273,10 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
       }
     } catch (err: any) {
       const message = err?.message || 'An unexpected error occurred.';
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown origin';
+      const appwriteCode = typeof err?.code === 'number' ? ` [code ${err.code}]` : '';
+      const appwriteType = err?.type ? ` [type ${err.type}]` : '';
+      const rawDetails = `${message}${appwriteCode}${appwriteType}`;
       if (message.toLowerCase().includes('failed to fetch')) {
         setError(
           'Failed to reach Appwrite. Check VITE_APPWRITE_ENDPOINT, your Appwrite Web platform origin, and that the FRA project endpoint matches your console.',
@@ -267,12 +287,12 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
         );
       } else if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('not allowed')) {
         setError(
-          'Appwrite blocked this request. Make sure your current domain is added under Appwrite Web platforms and Google OAuth is enabled.',
+          `Appwrite blocked this request from ${currentOrigin}. Raw error: ${rawDetails}. If you already added this origin, the failing step is likely the user profile document write or verification email request, not the platform entry.`,
         );
       } else if (message.toLowerCase().includes('email already exists')) {
         setError('An account with this email already exists. Please log in instead.');
       } else {
-        setError(message);
+        setError(rawDetails);
       }
     } finally {
       setEmailLoading(false);
