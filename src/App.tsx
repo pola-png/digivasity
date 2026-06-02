@@ -4439,7 +4439,11 @@ function MainLayout() {
       void (async () => {
         const current = await refreshCurrentUser();
         if (current) {
-          await createUserDocument(current);
+          try {
+            await createUserDocument(current);
+          } catch (err) {
+            console.error('Google sign-in succeeded but profile row write failed:', err);
+          }
           setUser(current);
         }
       })();
