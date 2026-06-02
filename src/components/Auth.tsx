@@ -26,6 +26,7 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithGoogle,
+  signOut,
   updateProfile,
   verifyEmail,
 } from '../lib/appwrite';
@@ -112,10 +113,14 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
         try {
           await verifyEmail(userId, secret);
           const current = await refreshCurrentUser();
-          if (current) {
+          if (current && current.uid === userId) {
             await createUserDocument(current);
             setStatus('Your email has been verified. You can continue now.');
             latestOnSuccess.current();
+          } else if (current && current.uid !== userId) {
+            await signOut();
+            setStatus('Your email has been verified. Please sign in to the verified account.');
+            setMode('login');
           } else {
             setStatus('Your email has been verified. You can sign in now.');
             setMode('login');

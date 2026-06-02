@@ -31,6 +31,15 @@ The Appwrite pieces handle auth, database, and storage. The live counselor chat 
 - `VITE_APPWRITE_GOOGLE_FAILURE_URL` optional
 - `VITE_APPWRITE_VERIFY_URL` required
 - `VITE_APPWRITE_RECOVERY_URL` required
+- `VITE_APPWRITE_NEWS_NOTIFIER_FUNCTION_ID` optional, but recommended for news notification fan-out
+- `VITE_FIREBASE_API_KEY` required for web push
+- `VITE_FIREBASE_AUTH_DOMAIN` required for web push
+- `VITE_FIREBASE_DATABASE_URL` optional, but supported
+- `VITE_FIREBASE_PROJECT_ID` required for web push
+- `VITE_FIREBASE_STORAGE_BUCKET` required for web push
+- `VITE_FIREBASE_MESSAGING_SENDER_ID` required for web push
+- `VITE_FIREBASE_APP_ID` required for web push
+- `VITE_FIREBASE_MEASUREMENT_ID` optional
 - `GEMINI_API_KEY`
 
 ## Appwrite collections
@@ -67,6 +76,27 @@ Use these settings so the app works with Appwrite's table/row security model:
    - Row security: `Enabled`
    - Created rows: `read` for `Any` if you want the in-app feed visible broadly, or `Users` if you want only signed-in users to see it
    - `update` and `delete` can stay with the creating user
+
+## News notification fan-out
+
+When a news post is published and notification saving is enabled, the app now:
+
+1. saves a row into the `notifications` table
+2. triggers the Appwrite function from `VITE_APPWRITE_NEWS_NOTIFIER_FUNCTION_ID`
+3. subscribes logged-in web users to the `news-updates` topic through Appwrite Messaging
+
+The web subscription uses the current user's Appwrite targets. If no push target exists yet, the app attempts to create one for the browser session before subscribing it to `news-updates`.
+
+## Web push setup
+
+This repo now mirrors the native app's push flow for web clients:
+
+1. Firebase Messaging generates the browser token
+2. Appwrite stores that token as a push target for the current user
+3. The browser subscribes to the `news-updates` topic
+4. The Appwrite Function fan-outs the push when news is published
+
+The service worker lives at [`public/firebase-messaging-sw.js`](/c:/digivasity_web/public/firebase-messaging-sw.js) and reads its config from the `/firebase-config.js` endpoint served by [`server.ts`](/c:/digivasity_web/server.ts).
 
 Important:
 - Do not pass document-level `create` permission to `createDocument`. Appwrite only accepts `read`, `update`, `delete`, or `write` for row permissions.

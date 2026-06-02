@@ -2,12 +2,15 @@ import {
   Client,
   Account,
   Databases,
+  Functions,
+  Messaging,
   Storage,
   ID,
   Query,
   Permission,
   Role,
   OAuthProvider,
+  ExecutionMethod,
 } from 'appwrite';
 import type { Models } from 'appwrite';
 
@@ -58,7 +61,13 @@ if (projectId) client.setProject(projectId);
 
 const account = new Account(client);
 const databases = new Databases(client);
+const functions = new Functions(client);
+const messaging = new Messaging(client);
 const storage = new Storage(client);
+
+export const NEWS_UPDATES_TOPIC_ID = 'news-updates';
+const NEWS_NOTIFIER_FUNCTION_ID =
+  import.meta.env.VITE_APPWRITE_NEWS_NOTIFIER_FUNCTION_ID || '';
 
 export interface AppUser {
   uid: string;
@@ -90,7 +99,34 @@ const SYSTEM_ADMIN_EMAILS = [
 
 const nowIso = () => new Date().toISOString();
 const todayIso = () => nowIso().slice(0, 10);
-const toJsonText = (value: unknown) => JSON.stringify(value ?? []);
+const parseJsonArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map((item) => String(item));
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+const toJsonText = (value: unknown) => {
+  if (typeof value === 'string' && value.trim()) return value;
+  return JSON.stringify(value ?? []);
+};
+
+const getBrowserDeviceId = () => {
+  if (typeof window === 'undefined') return ID.unique();
+
+  const storageKey = 'digivasity:web-push-device-id';
+  const existing = window.localStorage.getItem(storageKey);
+  if (existing) return existing;
+
+  const next = ID.unique();
+  window.localStorage.setItem(storageKey, next);
+  return next;
+};
 
 const isAdminEmail = (email?: string | null) => {
   if (!email) return false;
@@ -185,6 +221,66 @@ export const signInWithEmailAndPassword = async (email: string, password: string
 
 export const signInWithGoogle = () => {
   account.createOAuth2Session(OAuthProvider.Google, googleSuccessUrl, googleFailureUrl);
+};
+
+export const triggerNewsNotifierFunction = async (params: {
+  title: string;
+  body?: string;
+  newsId?: string;
+  slug?: string;
+  topic?: string;
+}) => {
+  if (!NEWS_NOTIFIER_FUNCTION_ID) return null;
+
+  return functions.createExecution({
+    functionId: NEWS_NOTIFIER_FUNCTION_ID,
+    async: true,
+    method: ExecutionMethod.POST,
+    body: JSON.stringify({
+      title: params.title,
+      body: params.body || '',
+      newsId: params.newsId || '',
+      slug: params.slug || '',
+      topic: params.topic || NEWS_UPDATES_TOPIC_ID,
+    }),
+  });
+};
+
+export const ensureNewsUpdatesTopicSubscription = async (identifier: string) => {
+  if (!identifier) return null;
+  if (!projectId) return null;
+
+  const current = await account.get();
+  const targetId = getBrowserDeviceId();
+  const existingTarget = current.targets.find((target) => target.$id === targetId && target.providerType === 'push');
+
+  try {
+    if (existingTarget) {
+      await account.updatePushTarget({
+        targetId,
+        identifier,
+      });
+    } else {
+      await account.createPushTarget({
+        targetId,
+        identifier,
+      });
+    }
+  } catch (err) {
+    console.warn('Could not create or update the browser push target for news-updates:', err);
+    return null;
+  }
+
+  try {
+    return await messaging.createSubscriber({
+      topicId: NEWS_UPDATES_TOPIC_ID,
+      subscriberId: `${NEWS_UPDATES_TOPIC_ID}:${targetId}`,
+      targetId,
+    });
+  } catch (err) {
+    console.warn('Could not subscribe the browser push target to news-updates:', err);
+    return null;
+  }
 };
 
 export const updateProfile = async (user: AppUser, data: { displayName?: string }) => {
@@ -324,7 +420,7 @@ export const getFilePreviewUrl = (fileId: string) => {
 
 export const createUserDocument = async (
   user: AppUser,
-  additionalData?: { fullName?: string; whatsapp?: string },
+  additionalData?: { fullName?: string; whatsapp?: string; pushToken?: string },
 ) => {
   const userId = user.uid;
   const isAdmin = isAdminEmail(user.email);
@@ -353,17 +449,26 @@ export const createUserDocument = async (
         type: 'none',
         expiresAt: null,
       }),
-    pushTokens: toJsonText(existing?.pushTokens),
+    pushTokens: additionalData?.pushToken
+      ? toJsonText(
+          Array.from(
+            new Set([
+              ...parseJsonArray(existing?.pushTokens),
+              additionalData.pushToken,
+            ]),
+          ),
+        )
+      : toJsonText(existing?.pushTokens),
     pushPreferencesJson:
       existing?.pushPreferencesJson ||
       JSON.stringify({
         marketing: true,
         transactional: true,
       }),
-    fcmToken: existing?.fcmToken || '',
-    pushToken: existing?.pushToken || '',
-    lastPushToken: existing?.lastPushToken || '',
-    lastPushTokenAt: existing?.lastPushTokenAt || '',
+    fcmToken: additionalData?.pushToken || existing?.fcmToken || '',
+    pushToken: additionalData?.pushToken || existing?.pushToken || '',
+    lastPushToken: additionalData?.pushToken || existing?.lastPushToken || '',
+    lastPushTokenAt: additionalData?.pushToken ? nowIso() : existing?.lastPushTokenAt || '',
     updatedAt: nowIso(),
   };
 

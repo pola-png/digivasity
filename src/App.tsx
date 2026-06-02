@@ -75,6 +75,7 @@ import {
   createUserDocument,
   buildNewsPayload,
   buildNotificationPayload,
+  triggerNewsNotifierFunction,
   Query,
   Permission,
   Role,
@@ -82,6 +83,7 @@ import {
   AppUser,
 } from './lib/appwrite';
 import { Auth } from './components/Auth';
+import { PushNotificationManager } from './components/PushNotificationManager';
 
 // --- Types ---
 type View = 'home' | 'universities' | 'pof' | 'visa' | 'resume' | 'chat' | 'blog' | 'blog-post' | 'privacy' | 'terms' | 'contact' | 'admin';
@@ -4624,6 +4626,16 @@ function MainLayout() {
             Permission.delete(Role.user(user.uid)),
           ],
         );
+
+        void triggerNewsNotifierFunction({
+          title: `New Update: ${newsData.title}`,
+          body: newsData.excerpt,
+          newsId: docRef.$id,
+          slug: newsDoc.slug,
+          topic: 'news-updates',
+        }).catch((err) => {
+          console.error('News notifier function execution failed:', err);
+        });
       }
     } catch (err) {
       handleAppwriteError(err, OperationType.CREATE, 'news');
@@ -4653,6 +4665,14 @@ function MainLayout() {
           Permission.delete(Role.user(user.uid)),
         ],
       );
+
+      void triggerNewsNotifierFunction({
+        title,
+        body: message,
+        topic: 'news-updates',
+      }).catch((err) => {
+        console.error('Broadcast notifier function execution failed:', err);
+      });
     } catch (err) {
       handleAppwriteError(err, OperationType.CREATE, 'notifications');
     }
@@ -4716,6 +4736,7 @@ function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#2D1B14] text-white font-sans selection:bg-[#F27D26]/30">
+      <PushNotificationManager user={user} />
       <Navbar 
         activeView={view} 
         setView={handleSetView} 

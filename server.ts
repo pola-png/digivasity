@@ -45,6 +45,21 @@ async function startServer() {
 
   app.use(express.json());
 
+  const firebaseRuntimeConfig = {
+    apiKey: process.env.VITE_FIREBASE_API_KEY || '',
+    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID || '',
+    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: process.env.VITE_FIREBASE_APP_ID || '',
+  };
+
+  app.get('/firebase-config.js', (_req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(`self.FIREBASE_CONFIG = ${JSON.stringify(firebaseRuntimeConfig)};`);
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
