@@ -42,6 +42,8 @@ Make sure the following collection attributes exist in the `digivasitydb` databa
 3. `notifications` collection: `title`, `message`, `body`, `link`, `type`, `newsId`, `createdBy`, `createdAt`
 4. Storage bucket: `digivasity_storage`
 
+For the `users` collection, make sure the authenticated user can create their own document, and the document-level permissions should allow that same user to read/update/delete their profile record.
+
 ## Google OAuth setup
 
 1. In Appwrite Console, enable the Google OAuth provider for your project.

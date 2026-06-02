@@ -368,6 +368,7 @@ export const createUserDocument = async (
   };
 
   const permissions = [
+    Permission.create(Role.user(userId)),
     Permission.read(Role.user(userId)),
     Permission.update(Role.user(userId)),
     Permission.delete(Role.user(userId)),

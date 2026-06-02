@@ -232,15 +232,11 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
         if (result.user) {
           await updateProfile(result.user, { displayName: formData.fullName });
+          await createUserDocument(result.user, {
+            fullName: formData.fullName,
+            whatsapp: formData.whatsapp,
+          });
           await sendEmailVerification(verificationUrl);
-          try {
-            await createUserDocument(result.user, {
-              fullName: formData.fullName,
-              whatsapp: formData.whatsapp,
-            });
-          } catch (documentError) {
-            console.warn('Could not create the user profile document during registration:', documentError);
-          }
           setMode('verify');
           setStatus('Registration complete. Check your email to verify your account.');
         }
@@ -250,13 +246,13 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
           throw new Error('Unable to sign you in right now.');
         }
 
+        await createUserDocument(result.user);
+
         if (!result.user.emailVerified) {
           setMode('verify');
           setStatus('Please verify your email before logging in.');
           return;
         }
-
-        await createUserDocument(result.user);
         onSuccess();
       }
     } catch (err: any) {

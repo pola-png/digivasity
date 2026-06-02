@@ -4459,6 +4459,12 @@ function MainLayout() {
     const unsubscribe = onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setIsAuthReady(true);
+
+      if (currentUser) {
+        void createUserDocument(currentUser).catch((err) => {
+          console.warn('Could not ensure the user profile document exists:', err);
+        });
+      }
       
       // Clear pendingView and dismiss auth screen when user is logged in and verified
       if (currentUser && currentUser.emailVerified) {
