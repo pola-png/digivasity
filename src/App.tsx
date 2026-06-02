@@ -4462,7 +4462,7 @@ function MainLayout() {
 
       if (currentUser) {
         void createUserDocument(currentUser).catch((err) => {
-          console.warn('Could not ensure the user profile document exists:', err);
+          console.error('Could not ensure the user profile document exists:', err);
         });
       }
       

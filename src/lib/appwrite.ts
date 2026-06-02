@@ -376,8 +376,16 @@ export const createUserDocument = async (
 
   try {
     await updateDocument(appwriteIds.usersCollectionId, userId, payload);
-  } catch {
-    await createDocument(appwriteIds.usersCollectionId, userId, payload, permissions);
+  } catch (updateError) {
+    try {
+      await createDocument(appwriteIds.usersCollectionId, userId, payload, permissions);
+    } catch (createError) {
+      throw new Error(
+        `Failed to create user profile document for ${userId}. Update error: ${
+          updateError instanceof Error ? updateError.message : String(updateError)
+        }. Create error: ${createError instanceof Error ? createError.message : String(createError)}`,
+      );
+    }
   }
 
   return payload;
