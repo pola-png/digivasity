@@ -27,6 +27,17 @@ const getCurrentUrl = () =>
     ? `${window.location.origin}${window.location.pathname}`
     : 'http://localhost:5173';
 
+const appUrl = import.meta.env.VITE_APP_URL || getCurrentUrl();
+const buildModeRedirectUrl = (mode: 'verifyEmail' | 'resetPassword') => {
+  try {
+    const url = new URL(appUrl);
+    url.searchParams.set('mode', mode);
+    return url.toString();
+  } catch {
+    return `${appUrl}${appUrl.includes('?') ? '&' : '?'}mode=${mode}`;
+  }
+};
+
 const googleSuccessUrl =
   import.meta.env.VITE_APPWRITE_GOOGLE_SUCCESS_URL ||
   `${getCurrentUrl()}?auth=google`;
@@ -34,9 +45,11 @@ const googleFailureUrl =
   import.meta.env.VITE_APPWRITE_GOOGLE_FAILURE_URL ||
   `${getCurrentUrl()}?auth=google-error`;
 const verificationRedirectUrl =
-  import.meta.env.VITE_APPWRITE_VERIFY_URL || '';
+  import.meta.env.VITE_APPWRITE_VERIFY_URL ||
+  buildModeRedirectUrl('verifyEmail');
 const recoveryRedirectUrl =
-  import.meta.env.VITE_APPWRITE_RECOVERY_URL || '';
+  import.meta.env.VITE_APPWRITE_RECOVERY_URL ||
+  buildModeRedirectUrl('resetPassword');
 
 const client = new Client();
 
@@ -184,7 +197,7 @@ export const updateProfile = async (user: AppUser, data: { displayName?: string 
 };
 
 export const sendEmailVerification = async (redirectUrl: string) => {
-  return account.createVerification({ url: redirectUrl });
+  return account.createEmailVerification({ url: redirectUrl });
 };
 
 export const getVerificationRedirectUrl = () => verificationRedirectUrl;

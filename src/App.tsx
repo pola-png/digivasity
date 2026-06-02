@@ -4420,6 +4420,7 @@ function MainLayout() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [pendingView, setPendingView] = useState<View | null>(null);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register' | 'verify' | 'forgot' | 'reset-password'>('login');
   const navigate = useNavigate();
 
   // Check for email verification / password reset URL parameters on load
@@ -4430,6 +4431,7 @@ function MainLayout() {
     const secret = params.get('secret');
     const authMode = params.get('auth');
     if ((mode === 'verifyEmail' || mode === 'resetPassword') && userId && secret) {
+      setAuthInitialMode(mode === 'verifyEmail' ? 'verify' : 'reset-password');
       setShowAuth(true);
     }
     if (authMode === 'google') {
@@ -4443,6 +4445,7 @@ function MainLayout() {
       })();
     }
     if (authMode === 'google-error') {
+      setAuthInitialMode('login');
       setShowAuth(true);
     }
   }, []);
@@ -4691,6 +4694,7 @@ function MainLayout() {
     if (!publicViews.includes(newView)) {
       if (!user || !user.emailVerified) {
         setPendingView(newView);
+        setAuthInitialMode('verify');
         setShowAuth(true);
         return;
       }
@@ -4714,16 +4718,19 @@ function MainLayout() {
       <main className="pt-20 pb-4">
         {showAuth ? (
           <Auth 
+            initialMode={authInitialMode}
             onSuccess={() => {
               if (pendingView) {
                 setView(pendingView);
                 setPendingView(null);
               }
               setShowAuth(false);
+              setAuthInitialMode('login');
             }} 
             onBack={() => {
               setShowAuth(false);
               setPendingView(null);
+              setAuthInitialMode('login');
             }}
           />
         ) : (

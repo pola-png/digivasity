@@ -26,7 +26,6 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithGoogle,
-  signOut,
   updateProfile,
   verifyEmail,
 } from '../lib/appwrite';
@@ -62,6 +61,10 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
   const verificationUrl = useMemo(() => getVerificationRedirectUrl(), []);
   const recoveryUrl = useMemo(() => getRecoveryRedirectUrl(), []);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -199,11 +202,15 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
 
         if (result.user) {
           await updateProfile(result.user, { displayName: formData.fullName });
-          await createUserDocument(result.user, {
-            fullName: formData.fullName,
-            whatsapp: formData.whatsapp,
-          });
           await sendEmailVerification(verificationUrl);
+          try {
+            await createUserDocument(result.user, {
+              fullName: formData.fullName,
+              whatsapp: formData.whatsapp,
+            });
+          } catch (documentError) {
+            console.warn('Could not create the user profile document during registration:', documentError);
+          }
           setMode('verify');
           setStatus('Registration complete. Check your email to verify your account.');
         }
@@ -214,7 +221,6 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, onBack, initialMode = 'lo
         }
 
         if (!result.user.emailVerified) {
-          await signOut();
           setMode('verify');
           setStatus('Please verify your email before logging in.');
           return;
